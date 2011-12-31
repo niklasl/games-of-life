@@ -1,0 +1,9 @@
+Games Of Life
+========================================================================
+
+Mysteriously resurrected Games Of Life, originally DELETED and now totally
+unrelated to days of Code Retreat.
+
+These games are rudimentary explorations into different ways of solving
+problems using various forms of code (styles, paradigms, flavours).
+

@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Game Of Life</title>
+    <script src="jquery.min.js"></script>
+    <script src="coffee-script.js"></script>
+    <script type="text/coffeescript">
+
+      class Cell
+        constructor: (@x, @y, @alive, @neighbours=null) ->
+
+      #noise = 0#.001
+
+      tick = (cells) ->
+        nextStates = ([cell, nextState(cell)] for cell in cells)
+        for [cell, alive] in nextStates
+          cell.alive = alive
+        return
+
+      nextState = (cell) ->
+        liveCount = (other for other in cell.neighbours when other.alive).length
+        alive = if cell.alive then liveCount > 1 and liveCount < 4 else liveCount == 3
+        #alive = alive or noise and Math.random() > 1 - noise
+        return alive
+
+      setupCells = (width, height, seed) ->
+        cells = []
+        cellgrid = []
+        for y in [0..height]
+          row = []
+          cellgrid.push row
+          for x in [0..width]
+            cell = new Cell(x, y, seed(x, y))
+            row.push cell
+            cells.push cell
+        # optimize!
+        for cell in cells
+          nbrs = cell.neighbours = []
+          if 0 < cell.y < height-1 and 0 < cell.x < width-1
+            for [x, y] in [
+                [-1, -1], [0, -1], [1, -1]
+                [-1,  0],          [1,  0]
+                [-1,  1], [0,  1], [1,  1]
+            ]
+              nbrs.push cellgrid[cell.y+y][cell.x+x]
+        return cells
+
+
+      # Blinker and Toad intermix
+      pattern0 = [
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,1,1,1,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,1,1,1,0,0]
+        [0,0,0,1,1,1,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+      ]
+
+      # Toad (oscillator)
+      pattern1 = [
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,1,1,1,0,0]
+        [0,0,0,1,1,1,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+      ]
+
+      # Blinker (oscillator)
+      pattern2 = [
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,1,1,1,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+      ]
+
+      # Glider (spaceship)
+      pattern3 = [
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,1,0,0,0]
+        [0,0,0,1,0,1,0,0,0]
+        [0,0,0,0,1,1,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+      ]
+
+      # Block (still)
+      pattern4 = [
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,1,1,0,0,0,0]
+        [0,0,0,1,1,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0]
+      ]
+
+      #seed = (x, y) -> (pattern0[y-44]?[x-44]) or false
+
+      seed = (x, y) -> Math.random() > 0.618
+
+      delay = 10
+
+      cells = null
+      prev = null
+      prevPrev = null
+      staleCount = 0
+      reset = ->
+        cells = setupCells(100, 100, seed)
+        prev = null
+        staleCount = 0
+      reset()
+
+      $ ->
+        ctx = $('#game')[0].getContext '2d'
+
+        run = ->
+          for cell in cells
+            if cell.alive
+              ctx.fillRect (cell.x*2)-1, (cell.y*2)-1, 2, 2
+            else
+              ctx.clearRect (cell.x*2)-1, (cell.y*2)-1, 2, 2
+          prevPrev = prev
+          prev = (cell.alive for cell in cells)
+          tick cells
+          stale = if prevPrev
+                    (i for state, i in prevPrev \
+                      when state is cells[i].alive).length is cells.length
+                  else
+                    false
+          if stale
+            staleCount++
+            if staleCount > 64
+              reset()
+          setTimeout run, delay
+
+        run()
+
+    </script>
+    <style>
+      #game {
+        display: block;
+        margin: 0 auto;
+        box-shadow: 0px 10px 25px #444;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" height=200 width=200>
+  </body>
+</html>
